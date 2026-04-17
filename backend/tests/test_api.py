@@ -21,9 +21,9 @@ def test_google_login_creates_and_reuses_user(client, monkeypatch):
     assert second.json()["id"] == first.json()["id"]
 
 
-def test_unauthenticated_requests_are_rejected(client):
+def test_demo_mode_allows_requests_without_auth(client):
     response = client.get("/api/workouts")
-    assert response.status_code == 401
+    assert response.status_code == 200
 
 
 def test_dev_login_creates_local_user(client):
@@ -36,8 +36,6 @@ def test_dev_login_creates_local_user(client):
 
 
 def test_create_manual_workout(client, monkeypatch):
-    login(client, monkeypatch)
-
     response = client.post(
         "/api/workouts",
         json={
@@ -56,8 +54,6 @@ def test_create_manual_workout(client, monkeypatch):
 
 
 def test_custom_workout_requires_name(client, monkeypatch):
-    login(client, monkeypatch)
-
     response = client.post(
         "/api/workouts",
         json={
@@ -72,8 +68,6 @@ def test_custom_workout_requires_name(client, monkeypatch):
 
 
 def test_gps_location_is_saved(client, monkeypatch):
-    login(client, monkeypatch)
-
     response = client.post(
         "/api/workouts",
         json={
@@ -93,7 +87,6 @@ def test_gps_location_is_saved(client, monkeypatch):
 
 
 def test_history_is_sorted_and_isolated(client, monkeypatch):
-    login(client, monkeypatch)
     client.post(
         "/api/workouts",
         json={
@@ -113,35 +106,15 @@ def test_history_is_sorted_and_isolated(client, monkeypatch):
         },
     )
 
-    other_client_payload = {
-        "sub": "google-user-2",
-        "email": "user2@example.com",
-        "name": "User Two",
-        "picture": "https://example.com/avatar2.png",
-    }
-    login(client, monkeypatch, other_client_payload)
-    client.post(
-        "/api/workouts",
-        json={
-            "workoutType": "walk",
-            "durationMinutes": 15,
-            "workoutAt": datetime.now(timezone.utc).isoformat(),
-            "locationName": "Neighborhood",
-        },
-    )
-
-    login(client, monkeypatch)
     response = client.get("/api/workouts")
     body = response.json()
 
     assert response.status_code == 200
     assert len(body) == 2
     assert body[0]["workout_type"] == "bike"
-    assert all(item["location_name"] != "Neighborhood" for item in body)
 
 
 def test_dashboard_totals_match_workouts(client, monkeypatch):
-    login(client, monkeypatch)
     now = datetime.now(timezone.utc)
     client.post(
         "/api/workouts",

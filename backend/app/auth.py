@@ -38,20 +38,44 @@ def set_auth_cookie(response: Response, token_value: str) -> None:
         key="session_token",
         value=token_value,
         httponly=True,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         secure=settings.secure_cookies,
         max_age=settings.access_token_expire_minutes * 60,
     )
 
 
 def clear_auth_cookie(response: Response) -> None:
-    response.delete_cookie(key="session_token", httponly=True, samesite="lax", secure=settings.secure_cookies)
+    response.delete_cookie(
+        key="session_token",
+        httponly=True,
+        samesite=settings.cookie_samesite,
+        secure=settings.secure_cookies,
+    )
+
+
+def get_or_create_dev_user(db: Session) -> User:
+    dev_sub = f"dev:{settings.dev_user_email}"
+    user = db.query(User).filter(User.google_sub == dev_sub).one_or_none()
+    if user is None:
+        user = User(
+            google_sub=dev_sub,
+            email=settings.dev_user_email,
+            full_name=settings.dev_user_name,
+            avatar_url=None,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
 
 
 def get_current_user(
     session_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> User:
+    if settings.demo_no_auth:
+        return get_or_create_dev_user(db)
+
     if not session_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated.")
 

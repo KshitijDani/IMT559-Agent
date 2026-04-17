@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
-import { GoogleLogin } from "@react-oauth/google";
 import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import {
   createWorkout,
   fetchCurrentUser,
   fetchDashboard,
   fetchWorkouts,
-  loginAsDevUser,
-  loginWithGoogle,
   logout
 } from "./api";
 
@@ -22,8 +19,6 @@ const workoutOptions = [
   { value: "sport", label: "Sport" },
   { value: "custom", label: "Custom" }
 ];
-
-const bypassGoogleAuth = import.meta.env.VITE_BYPASS_GOOGLE_AUTH !== "false";
 
 function formatWorkoutName(workout) {
   if (workout.workout_type === "custom") {
@@ -311,44 +306,6 @@ function WorkoutFormPage({ onWorkoutSaved }) {
   );
 }
 
-function LoginPage({ onLogin }) {
-  const [error, setError] = useState("");
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-  async function handleSuccess(credentialResponse) {
-    try {
-      setError("");
-      await loginWithGoogle(credentialResponse.credential);
-      await onLogin();
-    } catch (loginError) {
-      setError(loginError.message);
-    }
-  }
-
-  return (
-    <main className="login-shell">
-      <section className="login-card">
-        <p className="eyebrow">Exercise tracker</p>
-        <h1>Keep your workouts in one clean log</h1>
-        <p>
-          Sign in with Google to save your sessions, keep a workout history, and see how much time
-          you have spent exercising this week.
-        </p>
-        {bypassGoogleAuth ? (
-          <button className="primary-button" onClick={onLogin} type="button">
-            Enter app
-          </button>
-        ) : googleClientId ? (
-          <GoogleLogin onSuccess={handleSuccess} onError={() => setError("Google sign-in failed.")} />
-        ) : (
-          <p className="error">Add `VITE_GOOGLE_CLIENT_ID` in the frontend environment to enable sign-in.</p>
-        )}
-        {error ? <p className="error">{error}</p> : null}
-      </section>
-    </main>
-  );
-}
-
 export default function App() {
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -356,7 +313,6 @@ export default function App() {
   const [workouts, setWorkouts] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [workoutsLoading, setWorkoutsLoading] = useState(false);
-  const [devLoginAttempted, setDevLoginAttempted] = useState(false);
   const navigate = useNavigate();
 
   async function loadCurrentUser() {
@@ -364,13 +320,6 @@ export default function App() {
       const currentUser = await fetchCurrentUser();
       setUser(currentUser);
     } catch {
-      if (bypassGoogleAuth && !devLoginAttempted) {
-        setDevLoginAttempted(true);
-        await loginAsDevUser();
-        const currentUser = await fetchCurrentUser();
-        setUser(currentUser);
-        return;
-      }
       setUser(null);
     } finally {
       setLoadingUser(false);
@@ -405,15 +354,9 @@ export default function App() {
 
   async function handleLogout() {
     await logout();
-    setUser(null);
+    await loadCurrentUser();
     setDashboard(null);
     setWorkouts([]);
-    setDevLoginAttempted(false);
-    navigate("/");
-  }
-
-  async function handleLoginComplete() {
-    await loadCurrentUser();
     navigate("/dashboard");
   }
 
@@ -436,7 +379,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <LoginPage onLogin={handleLoginComplete} />;
+    return <main className="login-shell"><section className="login-card">Connecting to demo app...</section></main>;
   }
 
   return (

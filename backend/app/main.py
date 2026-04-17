@@ -6,7 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from .auth import clear_auth_cookie, create_access_token, get_current_user, set_auth_cookie, verify_google_token
+from .auth import (
+    clear_auth_cookie,
+    create_access_token,
+    get_current_user,
+    get_or_create_dev_user,
+    set_auth_cookie,
+    verify_google_token,
+)
 from .config import settings
 from .db import Base, engine, get_db
 from .models import User, Workout
@@ -21,13 +28,18 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[settings.cors_origin],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+cors_options = {
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+
+if settings.cors_allow_all:
+    cors_options["allow_origin_regex"] = ".*"
+else:
+    cors_options["allow_origins"] = settings.cors_origins
+
+app.add_middleware(CORSMiddleware, **cors_options)
 @app.get("/health")
 def healthcheck() -> dict:
     return {"status": "ok"}
@@ -70,18 +82,7 @@ def dev_login(response: Response, db: Session = Depends(get_db)) -> User:
     if not settings.allow_dev_auth:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dev login is disabled.")
 
-    dev_sub = f"dev:{settings.dev_user_email}"
-    user = db.execute(select(User).where(User.google_sub == dev_sub)).scalar_one_or_none()
-    if user is None:
-        user = User(
-            google_sub=dev_sub,
-            email=settings.dev_user_email,
-            full_name=settings.dev_user_name,
-            avatar_url=None,
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+    user = get_or_create_dev_user(db)
 
     session_token = create_access_token(str(user.id))
     set_auth_cookie(response, session_token)

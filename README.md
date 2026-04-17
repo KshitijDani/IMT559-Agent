@@ -45,6 +45,12 @@ uvicorn app.main:app --reload
 
 Update `backend/.env` with your Google OAuth client ID and a strong `JWT_SECRET`.
 
+For a public ngrok frontend calling a public ngrok backend, set:
+
+- `CORS_ORIGINS` to a comma-separated list including your local frontend and public frontend URLs
+- `SECURE_COOKIES=true`
+- `COOKIE_SAMESITE=none`
+
 ### 3. Configure the frontend
 
 ```bash
@@ -55,6 +61,10 @@ npm run dev
 ```
 
 Update `frontend/.env` with the same Google client ID and the backend URL if needed.
+
+If you expose the Vite dev server through ngrok, start it with host binding enabled and use the ngrok hostname in Vite's allowed host list. This repo already allows:
+
+- `headgear-grinch-credit.ngrok-free.dev`
 
 ## Google sign-in setup
 
