@@ -1,0 +1,266 @@
+:root {
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  color: #1b1d1f;
+  background:
+    radial-gradient(circle at top left, rgba(242, 179, 61, 0.25), transparent 28%),
+    linear-gradient(180deg, #f6f1e7 0%, #f3f7f4 100%);
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.login-shell,
+.app-shell {
+  min-height: 100vh;
+}
+
+.login-shell {
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.login-card,
+.panel,
+.sidebar,
+.stat-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(27, 29, 31, 0.08);
+  box-shadow: 0 20px 60px rgba(52, 63, 51, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.login-card {
+  width: min(100%, 32rem);
+  padding: 2rem;
+  border-radius: 24px;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.sidebar {
+  border-radius: 28px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.nav {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.nav a {
+  text-decoration: none;
+  color: #2d312b;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: rgba(199, 217, 186, 0.35);
+}
+
+.nav a.active {
+  background: #1f4d3a;
+  color: #f6f1e7;
+}
+
+.content {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.hero,
+.panel {
+  border-radius: 28px;
+  padding: 1.5rem;
+}
+
+.hero {
+  background: linear-gradient(135deg, #1f4d3a, #48745b);
+  color: #f6f1e7;
+}
+
+.stack {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.stat-card span {
+  color: #536056;
+}
+
+.stat-card strong {
+  font-size: 2rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(27, 29, 31, 0.08);
+}
+
+.list-item:first-child {
+  border-top: none;
+}
+
+.list-item h3 {
+  margin: 0 0 0.25rem;
+}
+
+.list-item p,
+.list-meta span,
+.hint,
+.empty-state {
+  margin: 0;
+  color: #536056;
+}
+
+.list-meta {
+  text-align: right;
+  display: grid;
+}
+
+.workout-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.workout-form label {
+  display: grid;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+
+.workout-form input,
+.workout-form select {
+  width: 100%;
+  border: 1px solid rgba(27, 29, 31, 0.16);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.primary-button,
+.ghost-button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.8rem 1.2rem;
+  cursor: pointer;
+}
+
+.primary-button {
+  background: #1f4d3a;
+  color: #f6f1e7;
+}
+
+.ghost-button {
+  background: rgba(199, 217, 186, 0.5);
+  color: #1b1d1f;
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  color: inherit;
+}
+
+.status {
+  color: #1f4d3a;
+  margin: 0;
+}
+
+.error {
+  color: #b42318;
+  margin: 0;
+}
+
+h1,
+h2 {
+  margin-top: 0;
+}
+
+@media (max-width: 960px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .login-shell,
+  .app-shell {
+    padding: 1rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-header,
+  .list-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .list-meta {
+    text-align: left;
+  }
+}

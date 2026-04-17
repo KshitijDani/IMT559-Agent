@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: exercise-tracker-db
+    environment:
+      POSTGRES_DB: exercise_tracker
+      POSTGRES_USER: exercise_user
+      POSTGRES_PASSWORD: exercise_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
