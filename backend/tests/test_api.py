@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+
 def login(client, monkeypatch, token_payload=None):
     payload = token_payload or {
         "sub": "google-user-1",
@@ -13,6 +14,12 @@ def login(client, monkeypatch, token_payload=None):
     return response
 
 
+def login_as_dev_user(client):
+    response = client.post("/auth/dev-login")
+    assert response.status_code == 200
+    return response
+
+
 def test_google_login_creates_and_reuses_user(client, monkeypatch):
     first = login(client, monkeypatch)
     second = login(client, monkeypatch)
@@ -21,9 +28,9 @@ def test_google_login_creates_and_reuses_user(client, monkeypatch):
     assert second.json()["id"] == first.json()["id"]
 
 
-def test_demo_mode_allows_requests_without_auth(client):
+def test_unauthenticated_requests_are_rejected(client):
     response = client.get("/api/workouts")
-    assert response.status_code == 200
+    assert response.status_code == 401
 
 
 def test_dev_login_creates_local_user(client):
@@ -36,6 +43,8 @@ def test_dev_login_creates_local_user(client):
 
 
 def test_create_manual_workout(client, monkeypatch):
+    login_as_dev_user(client)
+
     response = client.post(
         "/api/workouts",
         json={
@@ -54,6 +63,8 @@ def test_create_manual_workout(client, monkeypatch):
 
 
 def test_custom_workout_requires_name(client, monkeypatch):
+    login_as_dev_user(client)
+
     response = client.post(
         "/api/workouts",
         json={
@@ -68,6 +79,8 @@ def test_custom_workout_requires_name(client, monkeypatch):
 
 
 def test_gps_location_is_saved(client, monkeypatch):
+    login_as_dev_user(client)
+
     response = client.post(
         "/api/workouts",
         json={
@@ -87,6 +100,8 @@ def test_gps_location_is_saved(client, monkeypatch):
 
 
 def test_history_is_sorted_and_isolated(client, monkeypatch):
+    login_as_dev_user(client)
+
     client.post(
         "/api/workouts",
         json={
@@ -115,6 +130,7 @@ def test_history_is_sorted_and_isolated(client, monkeypatch):
 
 
 def test_dashboard_totals_match_workouts(client, monkeypatch):
+    login_as_dev_user(client)
     now = datetime.now(timezone.utc)
     client.post(
         "/api/workouts",

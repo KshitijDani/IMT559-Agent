@@ -1,96 +1,278 @@
 # Exercise Tracker
 
-Exercise Tracker is a simple full-stack web app for logging workouts, storing a single location per workout, and seeing your recent exercise history and weekly totals.
+Exercise Tracker is a full-stack web app for logging workouts, storing one location per workout, and reviewing recent activity and weekly totals.
 
 ## Stack
 
 - Frontend: React + Vite
 - Backend: FastAPI
-- Database: Postgres
-- Auth: demo-mode no-auth locally, with Google Sign-In support available for future use
+- Database: PostgreSQL
+- Auth: Google Sign-In, with an optional dev-user bypass for local development
 
-## Features
+## Repo structure
 
-- Google account sign-in
-- Log workouts with preset or custom activity types
-- Manual duration entry
-- Browser geolocation with manual location fallback
-- Dashboard with totals and recent workouts
-- Workout history list for the signed-in user
-- Single-origin local runtime through `http://localhost:8000`
+- `frontend/`: React app
+- `backend/`: FastAPI app and backend tests
+- `docker-compose.yml`: local PostgreSQL service
+- `.env.example`: shared environment variable template for the whole app
 
-## Project structure
+## Prerequisites
 
-- `frontend/`: React single-page app
-- `backend/`: FastAPI API and tests
-- `docker-compose.yml`: local Postgres service
+You need these tools installed before running the app locally:
+
+- Git
+- Python 3.11 or newer
+- Node.js 20 or newer
+- npm
+- Docker Desktop
+
+To verify your local setup, run:
+
+```bash
+python3 --version
+node --version
+npm --version
+docker --version
+docker compose version
+```
+
+## Installing prerequisites
+
+### Docker Desktop
+
+This project uses Docker to run PostgreSQL locally.
+
+If you do not already have Docker Desktop:
+
+1. Download Docker Desktop for your operating system from Docker's official website.
+2. Install it.
+3. Open Docker Desktop and wait until it shows that Docker is running.
+
+After installation, confirm it works:
+
+```bash
+docker --version
+docker compose version
+```
+
+### Python
+
+If `python3 --version` does not work, install Python 3 from the official Python website or through your system package manager.
+
+### Node.js
+
+If `node --version` does not work, install Node.js 20 or newer from the official Node.js website.
 
 ## Local setup
 
-### 1. Start Postgres
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/KshitijDani/IMT559-Agent.git
+cd IMT559-Agent
+```
+
+### 2. Create the root environment file
+
+Copy the example env file:
+
+```bash
+cp .env.example .env
+```
+
+Important variables in `.env`:
+
+- `DATABASE_URL`: PostgreSQL connection string used by the backend
+- `JWT_SECRET`: secret used to sign auth cookies
+- `ALLOW_DEV_AUTH`: when `true`, the frontend and backend both allow the shared dev-user login flow
+- `GOOGLE_CLIENT_ID`: required only if you want real Google Sign-In
+- `DEV_USER_EMAIL` and `DEV_USER_NAME`: used when dev auth is enabled
+
+For local development, the easiest option is:
+
+```env
+ALLOW_DEV_AUTH=true
+GOOGLE_CLIENT_ID=
+```
+
+Set a real JWT secret before sharing the app publicly.
+
+### 3. Start PostgreSQL with Docker
+
+From the repo root:
 
 ```bash
 docker compose up -d
 ```
 
-### 2. Configure the backend
+This starts PostgreSQL on `localhost:5432`.
+
+To confirm the container is running:
 
 ```bash
-cp .env.example .env
-cd backend
-python3 -m venv .venv
-./.venv/bin/pip install -r requirements.txt
+docker compose ps
 ```
 
-Update the root `.env` with your `JWT_SECRET`, `BASE_URL`, and any ngrok/CORS settings you need.
+To stop the database later:
 
-For a public ngrok app running through the backend on port `8000`, set:
+```bash
+docker compose down
+```
 
-- `CORS_ORIGINS` to a comma-separated list including `http://localhost:8000` and any public app URLs
-- `SECURE_COOKIES=true`
-- `COOKIE_SAMESITE=none`
+### 4. Set up the backend Python environment
 
-### 3. Configure the frontend
+From the repo root:
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+This creates an isolated Python environment for the backend and installs FastAPI, SQLAlchemy, PostgreSQL drivers, and test dependencies.
+
+### 5. Install frontend dependencies
+
+In a new terminal, or after finishing backend setup:
 
 ```bash
 cd frontend
 npm install
+```
+
+### 6. Build the frontend
+
+The backend serves the built frontend files from `frontend/dist`, so build the frontend before starting the app:
+
+```bash
+cd frontend
 npm run build
 ```
 
-### 4. Run the full app through the backend
+You must rebuild the frontend after any frontend code changes.
+
+### 7. Start the backend server
+
+From the repo root:
 
 ```bash
-cd ../backend
-./.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+cd backend
+source .venv/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
+
+Once started, open:
+
+- [http://localhost:8000](http://localhost:8000)
 
 The backend serves both:
 
-- frontend UI at `http://localhost:8000`
-- backend API at `http://localhost:8000/api/*`
+- the frontend UI at `http://localhost:8000`
+- the API at `http://localhost:8000/api/*`
 
 Examples:
 
 - `http://localhost:8000/`
 - `http://localhost:8000/dashboard`
-- `http://localhost:8000/api/health` is still `http://localhost:8000/health`
+- `http://localhost:8000/health`
 
-## Notes
+## Auth modes
 
-- The current demo flow does not require login.
-- Both frontend and backend read configuration from the single root `.env` file.
-- Rebuild the frontend with `npm run build` in `frontend/` whenever you change frontend code.
-- FastAPI serves the compiled files from `frontend/dist`, so the app runs behind a single base URL.
-- Change `BASE_URL` in the root `.env` when you want the app to point at a different public or local host.
-- `backend/app/config.py` reads `BASE_URL` from the root `.env` at runtime.
-- `frontend/src/api.js` reads the same root `BASE_URL` at build time through Vite, so rebuild `frontend/` after changing it.
+### Local development mode
 
-## Backend test suite
+If `.env` contains:
+
+```env
+ALLOW_DEV_AUTH=true
+```
+
+the app will let you enter as the configured dev user instead of requiring Google Sign-In.
+
+The dev user details come from:
+
+- `DEV_USER_EMAIL`
+- `DEV_USER_NAME`
+
+### Google Sign-In mode
+
+If you want to use real Google auth:
+
+1. Set `ALLOW_DEV_AUTH=false`
+2. Set `GOOGLE_CLIENT_ID` in `.env`
+3. Rebuild the frontend:
+
+```bash
+cd frontend
+npm run build
+```
+
+4. Restart the backend
+
+## Running tests
+
+Backend tests:
 
 ```bash
 cd backend
+source .venv/bin/activate
 pytest
 ```
 
-The tests use an isolated in-memory SQLite database so they can run quickly without requiring Postgres.
+The backend tests use an isolated in-memory SQLite database, so they do not require the Docker PostgreSQL instance.
+
+## Common issues
+
+### `docker: command not found`
+
+Docker Desktop is not installed or not running yet.
+
+### `Connection refused` on port `5432`
+
+PostgreSQL is not running. Start it with:
+
+```bash
+docker compose up -d
+```
+
+### `ModuleNotFoundError` or missing Python packages
+
+Make sure you created and activated the backend virtual environment:
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Frontend changes are not showing up
+
+Rebuild the frontend:
+
+```bash
+cd frontend
+npm run build
+```
+
+Then restart the backend.
+
+### Google login is not showing
+
+Check:
+
+- `ALLOW_DEV_AUTH=false`
+- `GOOGLE_CLIENT_ID` is set in `.env`
+- you rebuilt the frontend after changing `.env`
+
+## Development workflow summary
+
+From a fresh clone, the usual order is:
+
+1. `cp .env.example .env`
+2. `docker compose up -d`
+3. `cd backend && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
+4. `cd frontend && npm install && npm run build`
+5. `cd backend && source .venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000`
+
+Then open [http://localhost:8000](http://localhost:8000).

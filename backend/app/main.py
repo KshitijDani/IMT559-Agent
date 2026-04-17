@@ -17,7 +17,7 @@ from .auth import (
     set_auth_cookie,
     verify_google_token,
 )
-from .config import settings
+from .config import APP_NAME, settings
 from .db import Base, engine, get_db
 from .models import User, Workout
 from .schemas import DashboardResponse, GoogleLoginRequest, UserResponse, WorkoutCreate, WorkoutResponse
@@ -33,7 +33,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title=settings.app_name, lifespan=lifespan)
+app = FastAPI(title=APP_NAME, lifespan=lifespan)
 
 cors_options = {
     "allow_credentials": True,
@@ -44,7 +44,7 @@ cors_options = {
 if settings.cors_allow_all:
     cors_options["allow_origin_regex"] = ".*"
 else:
-    cors_options["allow_origins"] = list({*settings.cors_origins, settings.base_origin})
+    cors_options["allow_origins"] = list(settings.cors_origins)
 
 app.add_middleware(CORSMiddleware, **cors_options)
 
@@ -102,7 +102,8 @@ def dev_login(response: Response, db: Session = Depends(get_db)) -> User:
 
 
 @app.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(response: Response) -> Response:
+def logout() -> Response:
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
     clear_auth_cookie(response)
     return response
 

@@ -7,7 +7,8 @@ export default defineConfig(({ mode }) => {
   return {
     envDir: "..",
     define: {
-      "import.meta.env.VITE_BASE_URL": JSON.stringify(env.BASE_URL || "")
+      "import.meta.env.ALLOW_DEV_AUTH": JSON.stringify(env.ALLOW_DEV_AUTH || "false"),
+      "import.meta.env.VITE_GOOGLE_CLIENT_ID": JSON.stringify(env.GOOGLE_CLIENT_ID || "")
     },
     plugins: [react()]
   };

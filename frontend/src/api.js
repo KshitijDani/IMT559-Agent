@@ -1,7 +1,5 @@
-const API_BASE_URL = (import.meta.env.VITE_BASE_URL || "").replace(/\/$/, "");
-
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(path, {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",

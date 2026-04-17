@@ -6,7 +6,7 @@ from google.oauth2 import id_token
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from .config import settings
+from .config import ACCESS_TOKEN_EXPIRE_MINUTES, JWT_ALGORITHM, settings
 from .db import get_db
 from .models import User
 
@@ -28,9 +28,9 @@ def verify_google_token(token_value: str) -> dict:
 
 
 def create_access_token(subject: str) -> str:
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": subject, "exp": expires_at}
-    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    return jwt.encode(payload, settings.jwt_secret, algorithm=JWT_ALGORITHM)
 
 
 def set_auth_cookie(response: Response, token_value: str) -> None:
@@ -40,7 +40,7 @@ def set_auth_cookie(response: Response, token_value: str) -> None:
         httponly=True,
         samesite=settings.cookie_samesite,
         secure=settings.secure_cookies,
-        max_age=settings.access_token_expire_minutes * 60,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
 
@@ -73,14 +73,11 @@ def get_current_user(
     session_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> User:
-    if settings.demo_no_auth:
-        return get_or_create_dev_user(db)
-
     if not session_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated.")
 
     try:
-        payload = jwt.decode(session_token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(session_token, settings.jwt_secret, algorithms=[JWT_ALGORITHM])
     except JWTError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session token.") from exc
 

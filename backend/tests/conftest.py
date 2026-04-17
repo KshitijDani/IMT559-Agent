@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.config import settings
 from app.db import Base, get_db
 from app.main import app
 
@@ -25,6 +26,17 @@ def reset_database() -> Generator[None, None, None]:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield
+
+
+@pytest.fixture(autouse=True)
+def auth_settings() -> Generator[None, None, None]:
+    original_allow_dev_auth = settings.allow_dev_auth
+    original_secure_cookies = settings.secure_cookies
+    settings.allow_dev_auth = True
+    settings.secure_cookies = False
+    yield
+    settings.allow_dev_auth = original_allow_dev_auth
+    settings.secure_cookies = original_secure_cookies
 
 
 @pytest.fixture

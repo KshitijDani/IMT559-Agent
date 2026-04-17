@@ -1,3 +1,4 @@
+import { GoogleLogin } from "@react-oauth/google";
 import { useEffect, useState } from "react";
 import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import {
@@ -5,6 +6,8 @@ import {
   fetchCurrentUser,
   fetchDashboard,
   fetchWorkouts,
+  loginAsDevUser,
+  loginWithGoogle,
   logout
 } from "./api";
 
@@ -306,9 +309,58 @@ function WorkoutFormPage({ onWorkoutSaved }) {
   );
 }
 
+function LoginPage({
+  authBusy,
+  authError,
+  googleClientIdConfigured,
+  onDevLogin,
+  onGoogleLogin
+}) {
+  const bypassGoogleAuth = import.meta.env.ALLOW_DEV_AUTH === "true";
+
+  return (
+    <main className="login-shell">
+      <section className="login-card">
+        <p className="eyebrow">Exercise tracker</p>
+        <h1>Keep your workouts in one clean log</h1>
+        <p>
+          Track sessions, capture where you worked out, and review your recent progress in one place.
+        </p>
+        {authError ? <p className="error">{authError}</p> : null}
+        {bypassGoogleAuth ? (
+          <button className="primary-button" onClick={onDevLogin} disabled={authBusy}>
+            {authBusy ? "Entering app..." : "Enter app as dev user"}
+          </button>
+        ) : googleClientIdConfigured ? (
+          <div className="login-actions">
+            <GoogleLogin
+              onSuccess={(credentialResponse) => {
+                if (credentialResponse.credential) {
+                  onGoogleLogin(credentialResponse.credential);
+                }
+              }}
+              onError={() => onGoogleLogin("")}
+              useOneTap
+            />
+          </div>
+        ) : (
+          <p className="hint">
+            Google auth is not configured yet. Add <code>GOOGLE_CLIENT_ID</code> in the root{" "}
+            <code>.env</code>, or enable the dev bypass flag.
+          </p>
+        )}
+      </section>
+    </main>
+  );
+}
+
 export default function App() {
+  const bypassGoogleAuth = import.meta.env.ALLOW_DEV_AUTH === "true";
+  const googleClientIdConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
   const [dashboard, setDashboard] = useState(null);
   const [workouts, setWorkouts] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(false);
@@ -319,8 +371,11 @@ export default function App() {
     try {
       const currentUser = await fetchCurrentUser();
       setUser(currentUser);
+      setAuthError("");
+      return currentUser;
     } catch {
       setUser(null);
+      return null;
     } finally {
       setLoadingUser(false);
     }
@@ -354,10 +409,44 @@ export default function App() {
 
   async function handleLogout() {
     await logout();
-    await loadCurrentUser();
+    setAuthError("");
+    setUser(null);
     setDashboard(null);
     setWorkouts([]);
     navigate("/dashboard");
+  }
+
+  async function handleDevLogin() {
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const currentUser = await loginAsDevUser();
+      setUser(currentUser);
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      setAuthBusy(false);
+      setLoadingUser(false);
+    }
+  }
+
+  async function handleGoogleLogin(credential) {
+    if (!credential) {
+      setAuthError("Google sign-in did not return a credential. Please try again.");
+      return;
+    }
+
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const currentUser = await loginWithGoogle(credential);
+      setUser(currentUser);
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      setAuthBusy(false);
+      setLoadingUser(false);
+    }
   }
 
   async function refreshAll() {
@@ -365,7 +454,14 @@ export default function App() {
   }
 
   useEffect(() => {
-    loadCurrentUser();
+    async function initializeSession() {
+      const currentUser = await loadCurrentUser();
+      if (!currentUser && bypassGoogleAuth) {
+        await handleDevLogin();
+      }
+    }
+
+    initializeSession();
   }, []);
 
   useEffect(() => {
@@ -379,7 +475,15 @@ export default function App() {
   }
 
   if (!user) {
-    return <main className="login-shell"><section className="login-card">Connecting to demo app...</section></main>;
+    return (
+      <LoginPage
+        authBusy={authBusy}
+        authError={authError}
+        googleClientIdConfigured={googleClientIdConfigured}
+        onDevLogin={handleDevLogin}
+        onGoogleLogin={handleGoogleLogin}
+      />
+    );
   }
 
   return (
