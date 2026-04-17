@@ -1,8 +1,11 @@
-from datetime import datetime, timedelta, timezone
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
@@ -18,6 +21,10 @@ from .config import settings
 from .db import Base, engine, get_db
 from .models import User, Workout
 from .schemas import DashboardResponse, GoogleLoginRequest, UserResponse, WorkoutCreate, WorkoutResponse
+
+FRONTEND_DIST_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+FRONTEND_ASSETS_DIR = FRONTEND_DIST_DIR / "assets"
+FRONTEND_INDEX_FILE = FRONTEND_DIST_DIR / "index.html"
 
 
 @asynccontextmanager
@@ -37,9 +44,14 @@ cors_options = {
 if settings.cors_allow_all:
     cors_options["allow_origin_regex"] = ".*"
 else:
-    cors_options["allow_origins"] = settings.cors_origins
+    cors_options["allow_origins"] = list({*settings.cors_origins, settings.base_origin})
 
 app.add_middleware(CORSMiddleware, **cors_options)
+
+if FRONTEND_ASSETS_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS_DIR), name="frontend-assets")
+
+
 @app.get("/health")
 def healthcheck() -> dict:
     return {"status": "ok"}
@@ -165,3 +177,22 @@ def get_dashboard(
         this_week_minutes=sum(workout.duration_minutes for workout in week_workouts),
         recent_workouts=workouts[:5],
     )
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def serve_frontend(full_path: str) -> Response:
+    # Serve the built React app from FastAPI so the entire product is available
+    # from a single origin such as http://localhost:8000.
+    if not FRONTEND_INDEX_FILE.exists():
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "detail": "Frontend build not found. Run `npm install` and `npm run build` in `frontend/`.",
+            },
+        )
+
+    requested_path = FRONTEND_DIST_DIR / full_path
+    if full_path and requested_path.is_file():
+        return FileResponse(requested_path)
+
+    return FileResponse(FRONTEND_INDEX_FILE)

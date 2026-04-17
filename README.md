@@ -7,7 +7,7 @@ Exercise Tracker is a simple full-stack web app for logging workouts, storing a 
 - Frontend: React + Vite
 - Backend: FastAPI
 - Database: Postgres
-- Auth: Google Sign-In with backend token verification and an HTTP-only session cookie
+- Auth: demo-mode no-auth locally, with Google Sign-In support available for future use
 
 ## Features
 
@@ -17,6 +17,7 @@ Exercise Tracker is a simple full-stack web app for logging workouts, storing a 
 - Browser geolocation with manual location fallback
 - Dashboard with totals and recent workouts
 - Workout history list for the signed-in user
+- Single-origin local runtime through `http://localhost:8000`
 
 ## Project structure
 
@@ -35,19 +36,17 @@ docker compose up -d
 ### 2. Configure the backend
 
 ```bash
-cd backend
 cp .env.example .env
+cd backend
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+./.venv/bin/pip install -r requirements.txt
 ```
 
-Update `backend/.env` with your Google OAuth client ID and a strong `JWT_SECRET`.
+Update the root `.env` with your `JWT_SECRET`, `BASE_URL`, and any ngrok/CORS settings you need.
 
-For a public ngrok frontend calling a public ngrok backend, set:
+For a public ngrok app running through the backend on port `8000`, set:
 
-- `CORS_ORIGINS` to a comma-separated list including your local frontend and public frontend URLs
+- `CORS_ORIGINS` to a comma-separated list including `http://localhost:8000` and any public app URLs
 - `SECURE_COOKIES=true`
 - `COOKIE_SAMESITE=none`
 
@@ -55,24 +54,37 @@ For a public ngrok frontend calling a public ngrok backend, set:
 
 ```bash
 cd frontend
-cp .env.example .env
 npm install
-npm run dev
+npm run build
 ```
 
-Update `frontend/.env` with the same Google client ID and the backend URL if needed.
+### 4. Run the full app through the backend
 
-If you expose the Vite dev server through ngrok, start it with host binding enabled and use the ngrok hostname in Vite's allowed host list. This repo already allows:
+```bash
+cd ../backend
+./.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
-- `headgear-grinch-credit.ngrok-free.dev`
+The backend serves both:
 
-## Google sign-in setup
+- frontend UI at `http://localhost:8000`
+- backend API at `http://localhost:8000/api/*`
 
-1. Create a Google OAuth web application credential in Google Cloud.
-2. Add `http://localhost:5173` as an authorized JavaScript origin.
-3. Put that client ID in both:
-   - `backend/.env` as `GOOGLE_CLIENT_ID`
-   - `frontend/.env` as `VITE_GOOGLE_CLIENT_ID`
+Examples:
+
+- `http://localhost:8000/`
+- `http://localhost:8000/dashboard`
+- `http://localhost:8000/api/health` is still `http://localhost:8000/health`
+
+## Notes
+
+- The current demo flow does not require login.
+- Both frontend and backend read configuration from the single root `.env` file.
+- Rebuild the frontend with `npm run build` in `frontend/` whenever you change frontend code.
+- FastAPI serves the compiled files from `frontend/dist`, so the app runs behind a single base URL.
+- Change `BASE_URL` in the root `.env` when you want the app to point at a different public or local host.
+- `backend/app/config.py` reads `BASE_URL` from the root `.env` at runtime.
+- `frontend/src/api.js` reads the same root `BASE_URL` at build time through Vite, so rebuild `frontend/` after changing it.
 
 ## Backend test suite
 
